@@ -1,1 +1,6 @@
-# studio-app
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.1.2+cpu
+torchaudio==2.1.2+cpu
+gradio
+faster-whisper
+ffmpeg-python
