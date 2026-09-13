@@ -1,0 +1,6 @@
+openai-whisper
+gradio
+torch
+demucs
+arabic-reshaper
+python-bidi
