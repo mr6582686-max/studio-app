@@ -7,9 +7,9 @@ from faster_whisper import WhisperModel
 import arabic_reshaper
 from bidi.algorithm import get_display
 
-# Optimized Whisper Model for High Accuracy & Speed
+# Fast & High Accuracy Whisper Model Configuration
 whisper_model = WhisperModel(
-    "small",
+    "tiny",
     device="cpu",
     compute_type="int8",
     cpu_threads=4,
@@ -42,7 +42,7 @@ def fix_rtl_script(text, lang_code):
         return get_display(reshaped_text)
     return text
 
-def process_perfect_video(video_input, target_language, font_size):
+def process_fast_video(video_input, target_language, font_size, enable_flip):
     try:
         if video_input is None:
             return None, "Error: Pehle video upload karein!"
@@ -58,15 +58,15 @@ def process_perfect_video(video_input, target_language, font_size):
             raw_audio
         ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # 2. 100% Fast Background Music Cut (Bandpass + Noise Gate + Dynamic Compression)
+        # 2. Fast Music Cut & Voice Isolation Filter
         cleaned_audio = "voice_isolated.wav"
         subprocess.run([
             "ffmpeg", "-y", "-i", raw_audio,
-            "-af", "highpass=f=280,lowpass=f=3400,afftdn=nr=32:nf=-50:tn=1,compand=attacks=0.01:decays=0.05:points=-80/-80|-40/-10|0/0",
+            "-af", "highpass=f=280,lowpass=f=3200,afftdn=nr=30:nf=-50:tn=1,compand=attacks=0:decays=0.05:points=-80/-80|-40/-10|0/0",
             cleaned_audio
         ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # 3. High Accuracy Speech Recognition
+        # 3. High Speed Speech Recognition
         selected_lang = LANGUAGE_DICT.get(target_language, "en")
         task_type = "translate" if selected_lang == "en" else "transcribe"
         
@@ -74,15 +74,15 @@ def process_perfect_video(video_input, target_language, font_size):
             cleaned_audio,
             task=task_type,
             language=None if task_type == "translate" else selected_lang,
-            beam_size=3,
-            best_of=3,
+            beam_size=1,
+            best_of=1,
             temperature=0,
             vad_filter=True,
             vad_parameters=dict(min_silence_duration_ms=250),
             word_timestamps=False
         )
 
-        # 4. Perfect Bottom ASS Captions Assembly
+        # 4. ASS Subtitles Formatting (Bottom Center Alignment)
         ass_path = "output_subtitles.ass"
         ass_header = f"""[Script Info]
 ScriptType: v4.00+
@@ -111,48 +111,55 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
                 f.write(f"Dialogue: 0,{convert_time(start_time)},{convert_time(end_time)},DefaultStyle,,0,0,0,,{formatted_dialogue}\n")
 
-        # 5. Super Fast Video Encoding
+        # 5. Super Fast Video Encoding (Video Flip + Subtitles)
+        video_filters = []
+        if enable_flip:
+            video_filters.append("hflip")
+        video_filters.append(f"ass={ass_path}")
+        vf_chain = ",".join(video_filters)
+
         final_video = "final_output_video.mp4"
         ffmpeg_render = [
             "ffmpeg", "-y",
             "-i", raw_input,
             "-i", cleaned_audio,
-            "-vf", f"ass={ass_path}",
+            "-vf", vf_chain,
             "-map", "0:v:0",
             "-map", "1:a:0",
             "-c:v", "libx264",
             "-preset", "ultrafast",
             "-tune", "zerolatency",
-            "-crf", "30",
+            "-crf", "32",
             "-c:a", "aac",
             "-b:a", "96k",
             final_video
         ]
         subprocess.run(ffmpeg_render, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        return final_video, "🎯 Success! Background Music Muted & Perfect Captions Added."
+        return final_video, "⚡ Ultra-Fast Processing Complete!"
 
     except Exception as e:
         return None, f"Error: {str(e)}"
 
-# Permanent Link Interface
-with gr.Blocks(title="⚡ Fast Captions & Vocal Studio") as demo:
-    gr.Markdown("# ⚡ Permanent Fast Video Studio (Captions + Music Remover)")
+# UI Layout
+with gr.Blocks(title="⚡ Ultra Fast Video Studio") as demo:
+    gr.Markdown("# ⚡ High-Speed Video Studio")
     
     with gr.Row():
         with gr.Column():
             video_in = gr.Video(label="📹 Upload Video")
-            target_lang = gr.Dropdown(choices=list(LANGUAGE_DICT.keys()), value="English", label="🌐 Subtitle Language")
+            target_lang = gr.Dropdown(choices=list(LANGUAGE_DICT.keys()), value="English", label="🌐 Language")
             font_sz = gr.Slider(minimum=12, maximum=32, step=1, value=18, label="🔤 Font Size")
-            submit_btn = gr.Button("🚀 Start Fast Processing")
+            c_flip = gr.Checkbox(label="🔄 Flip Video (Horizontal)", value=True)
+            submit_btn = gr.Button("🚀 Fast Process")
         
         with gr.Column():
-            video_out = gr.Video(label="🎬 Output Video")
-            status_out = gr.Textbox(label="Status Window")
+            video_out = gr.Video(label="🎬 Processed Output")
+            status_out = gr.Textbox(label="Status")
 
     submit_btn.click(
-        fn=process_perfect_video,
-        inputs=[video_in, target_lang, font_sz],
+        fn=process_fast_video,
+        inputs=[video_in, target_lang, font_sz, c_flip],
         outputs=[video_out, status_out]
     )
 
