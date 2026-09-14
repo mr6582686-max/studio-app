@@ -7,8 +7,8 @@ from faster_whisper import WhisperModel
 import arabic_reshaper
 from bidi.algorithm import get_display
 
-# Light AI Model for Render (512MB RAM safe)
-whisper_model = WhisperModel("tiny", device="cpu", compute_type="int8")
+# Speed optimized model loading
+whisper_model = WhisperModel("tiny", device="cpu", compute_type="int8", cpu_threads=4)
 
 LANGUAGE_DICT = {
     "English": "en",
@@ -44,15 +44,15 @@ def process_master_studio(video_input, target_language, font_size, text_color, p
         raw_input = "raw_input_video.mp4"
         shutil.copy(video_input, raw_input)
 
-        # 1. Extract Audio
+        # 1. Fast Extract Audio (Lower bitrate for fast AI processing)
         raw_audio = "extracted_speech.wav"
         subprocess.run([
             "ffmpeg", "-y", "-i", raw_input,
-            "-vn", "-acodec", "pcm_s16le", "-ar", "44100", "-ac", "2",
+            "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
             raw_audio
         ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # 2. Vocal Isolation / Music Filter (FFmpeg highpass/lowpass for Render)
+        # 2. Fast Voice Filtering
         cleaned_audio = raw_audio
         if remove_music:
             cleaned_audio = "voice_isolated.wav"
@@ -62,9 +62,9 @@ def process_master_studio(video_input, target_language, font_size, text_color, p
                 cleaned_audio
             ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # 3. Voice Changer (Pitch Shift & FX)
+        # 3. Fast Pitch Shift
         final_audio = "processed_final_audio.wav"
-        pitch_rate = str(int(44100 * pitch_level))
+        pitch_rate = str(int(16000 * pitch_level))
         tempo_rate = str(round(1.0 / pitch_level, 3))
         
         audio_filters = [f"asetrate={pitch_rate}", f"atempo={tempo_rate}"]
@@ -84,17 +84,21 @@ def process_master_studio(video_input, target_language, font_size, text_color, p
             final_audio
         ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # 4. Whisper Recognition & Subtitles
+        # 4. Fast Transcription / Translation
         selected_lang = LANGUAGE_DICT.get(target_language, "en")
         task_type = "translate" if selected_lang == "en" else "transcribe"
         
         segments, _ = whisper_model.transcribe(
             cleaned_audio,
             task=task_type,
-            language=None if task_type == "translate" else selected_lang
+            language=None if task_type == "translate" else selected_lang,
+            beam_size=1,            # 🚀 Fast Search
+            best_of=1,              # 🚀 Fast Processing
+            vad_filter=True,        # 🚀 Skips silent audio spaces fast
+            word_timestamps=False
         )
 
-        # 5. ASS Subtitles Format Generator
+        # 5. ASS Subtitles Generator
         color_map = {
             "Yellow": "&H0000FFFF",
             "White": "&H00FFFFFF",
@@ -131,7 +135,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
                 f.write(f"Dialogue: 0,{convert_time(start_time)},{convert_time(end_time)},DefaultStyle,,0,0,0,,{formatted_dialogue}\n")
 
-        # 6. Final Video Assembly
+        # 6. Ultra-fast Video Encoding
         video_filters = []
         if enable_copyright_shield:
             video_filters.append("hflip")
@@ -147,20 +151,23 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             "-vf", vf_chain,
             "-map", "0:v:0",
             "-map", "1:a:0",
-            "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
-            "-c:a", "aac", "-b:a", "128k",
+            "-c:v", "libx264",
+            "-preset", "ultrafast",  # 🚀 Fastest processing speed
+            "-crf", "30",           # Light output file size
+            "-c:a", "aac",
+            "-b:a", "96k",
             final_video
         ]
         subprocess.run(ffmpeg_render, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        return final_video, "🎯 Success! Voice shifted, Subtitles generated & Processed successfully!"
+        return final_video, "⚡ Processed rapidly in seconds!"
 
     except Exception as e:
         return None, f"Error: {str(e)}"
 
 # Gradio Interface
-with gr.Blocks(title="⚡ Studio Ultimate") as demo:
-    gr.Markdown("# ⚡ Studio Ultimate (AI Vocal Isolation + Pitch Shift + Subtitles)")
+with gr.Blocks(title="⚡ Fast Studio Ultimate") as demo:
+    gr.Markdown("# ⚡ Fast Studio Ultimate (Speed Optimized)")
     with gr.Row():
         with gr.Column():
             video_in = gr.Video(label="📹 Upload Video")
