@@ -7,7 +7,7 @@ from faster_whisper import WhisperModel
 import arabic_reshaper
 from bidi.algorithm import get_display
 
-# Fast CPU Optimized Whisper Model
+# Optimized Whisper model for extreme CPU speed
 whisper_model = WhisperModel("tiny", device="cpu", compute_type="int8", cpu_threads=4)
 
 LANGUAGE_DICT = {
@@ -39,12 +39,12 @@ def fix_rtl_script(text, lang_code):
 def process_master_studio(video_input, target_language, font_size, text_color, pitch_level, voice_effect, remove_music, enable_copyright_shield):
     try:
         if video_input is None:
-            return None, "Error: Pehle video upload karein!"
+            return None, "Error: Video upload karein!"
 
         raw_input = "raw_input_video.mp4"
         shutil.copy(video_input, raw_input)
 
-        # 1. Fast Audio Extraction
+        # 1. High-Speed Audio Extraction
         raw_audio = "extracted_speech.wav"
         subprocess.run([
             "ffmpeg", "-y", "-i", raw_input,
@@ -52,17 +52,17 @@ def process_master_studio(video_input, target_language, font_size, text_color, p
             raw_audio
         ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # 2. Strong Background Music & Noise Removal
+        # 2. Aggressive Background Music & Noise Cut Filter
         cleaned_audio = raw_audio
         if remove_music:
             cleaned_audio = "voice_isolated.wav"
             subprocess.run([
                 "ffmpeg", "-y", "-i", raw_audio,
-                "-af", "highpass=f=300,lowpass=f=3400,afftdn=nr=15:nf=-30",
+                "-af", "highpass=f=200,lowpass=f=3000,afftdn=nr=25:nf=-40:tn=1",
                 cleaned_audio
             ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # 3. Voice Changer Pitch Effects
+        # 3. Fast Voice Changer Effects
         final_audio = "processed_final_audio.wav"
         pitch_rate = str(int(16000 * pitch_level))
         tempo_rate = str(round(1.0 / pitch_level, 3))
@@ -70,11 +70,11 @@ def process_master_studio(video_input, target_language, font_size, text_color, p
         audio_filters = [f"asetrate={pitch_rate}", f"atempo={tempo_rate}"]
         
         if voice_effect == "Deep Male":
-            audio_filters.append("equalizer=f=120:width_type=h:width=200:g=6,bass=g=4")
+            audio_filters.append("equalizer=f=100:width_type=h:width=200:g=8,bass=g=6")
         elif voice_effect == "High Female / Kid":
-            audio_filters.append("equalizer=f=3200:width_type=h:width=1000:g=5,treble=g=4")
+            audio_filters.append("equalizer=f=3000:width_type=h:width=1000:g=6,treble=g=5")
         elif voice_effect == "Radio / Telephone":
-            audio_filters.append("highpass=f=300,lowpass=f=3000")
+            audio_filters.append("highpass=f=400,lowpass=f=2600")
             
         af_chain = ",".join(audio_filters)
         
@@ -84,7 +84,7 @@ def process_master_studio(video_input, target_language, font_size, text_color, p
             final_audio
         ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # 4. Rapid Transcription
+        # 4. Ultra-Fast Transcription Execution
         selected_lang = LANGUAGE_DICT.get(target_language, "en")
         task_type = "translate" if selected_lang == "en" else "transcribe"
         
@@ -94,12 +94,13 @@ def process_master_studio(video_input, target_language, font_size, text_color, p
             language=None if task_type == "translate" else selected_lang,
             beam_size=1,
             best_of=1,
+            temperature=0,
             vad_filter=True,
-            vad_parameters=dict(min_silence_duration_ms=500),
+            vad_parameters=dict(min_silence_duration_ms=300),
             word_timestamps=False
         )
 
-        # 5. Bottom Positioned Subtitles (Alignment=2)
+        # 5. Bottom Captions Formatting
         color_map = {
             "Yellow": "&H0000FFFF",
             "White": "&H00FFFFFF",
@@ -117,7 +118,7 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: DefaultStyle,Sans,{font_size},{primary_color},&H00000000,&H00000000,&H80000000,1,0,0,0,100,100,1,0,1,2,1,2,10,10,20,1
+Style: DefaultStyle,Sans,{font_size},{primary_color},&H00000000,&H00000000,&H80000000,1,0,0,0,100,100,1,0,1,2,1,2,10,10,25,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -136,7 +137,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
                 f.write(f"Dialogue: 0,{convert_time(start_time)},{convert_time(end_time)},DefaultStyle,,0,0,0,,{formatted_dialogue}\n")
 
-        # 6. Optimized Fast Video Encoding
+        # 6. Ultrafast Video Transcoding Output
         video_filters = []
         if enable_copyright_shield:
             video_filters.append("hflip")
@@ -155,35 +156,35 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             "-c:v", "libx264",
             "-preset", "ultrafast",
             "-tune", "zerolatency",
-            "-crf", "30",
+            "-crf", "32",
             "-c:a", "aac",
-            "-b:a", "96k",
+            "-b:a", "64k",
             final_video
         ]
         subprocess.run(ffmpeg_render, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        return final_video, "🎯 Successfully Processed! Subtitles placed at bottom."
+        return final_video, "⚡ Ultra-Fast Processing Complete!"
 
     except Exception as e:
         return None, f"Error: {str(e)}"
 
 # Gradio Interface
-with gr.Blocks(title="⚡ Studio Ultimate") as demo:
-    gr.Markdown("# ⚡ Studio Ultimate (Fast Processing + Bottom Captions)")
+with gr.Blocks(title="⚡ Fast Studio Ultimate") as demo:
+    gr.Markdown("# ⚡ High-Speed Studio App")
     with gr.Row():
         with gr.Column():
             video_in = gr.Video(label="📹 Upload Video")
-            target_lang = gr.Dropdown(choices=list(LANGUAGE_DICT.keys()), value="English", label="🌐 Select Subtitle Language")
-            font_sz = gr.Slider(minimum=12, maximum=32, step=1, value=18, label="🔤 Subtitle Font Size")
+            target_lang = gr.Dropdown(choices=list(LANGUAGE_DICT.keys()), value="English", label="🌐 Subtitle Language")
+            font_sz = gr.Slider(minimum=12, maximum=32, step=1, value=18, label="🔤 Font Size")
             txt_clr = gr.Radio(choices=["Yellow", "White", "Green", "Cyan"], value="Yellow", label="🎨 Caption Color")
-            pitch_st = gr.Slider(minimum=0.70, maximum=1.30, step=0.02, value=0.88, label="🎛️ Voice Pitch Shift")
-            v_style = gr.Radio(choices=["Standard", "Deep Male", "High Female / Kid", "Radio / Telephone"], value="Deep Male", label="🎙️ Voice FX Style")
-            rem_mus = gr.Checkbox(label="🎵 Complete Background Music Removal", value=True)
-            c_shield = gr.Checkbox(label="🛡️ Anti-Copyright Shield (H-Flip)", value=True)
-            submit_btn = gr.Button("🚀 Start Processing")
+            pitch_st = gr.Slider(minimum=0.70, maximum=1.30, step=0.02, value=0.88, label="🎛️ Pitch Shift")
+            v_style = gr.Radio(choices=["Standard", "Deep Male", "High Female / Kid", "Radio / Telephone"], value="Deep Male", label="🎙️ Voice FX")
+            rem_mus = gr.Checkbox(label="🎵 Heavy Music & Noise Removal", value=True)
+            c_shield = gr.Checkbox(label="🛡️ Anti-Copyright Shield", value=True)
+            submit_btn = gr.Button("🚀 Start Fast Processing")
         
         with gr.Column():
-            video_out = gr.Video(label="🎬 Final Processed Video")
+            video_out = gr.Video(label="🎬 Processed Video")
             status_out = gr.Textbox(label="Status Window")
 
     submit_btn.click(
