@@ -7,8 +7,14 @@ from faster_whisper import WhisperModel
 import arabic_reshaper
 from bidi.algorithm import get_display
 
-# Light & Fast Whisper Model
-whisper_model = WhisperModel("tiny", device="cpu", compute_type="int8", cpu_threads=4)
+# Optimized Whisper Model for High Accuracy & Speed
+whisper_model = WhisperModel(
+    "small",
+    device="cpu",
+    compute_type="int8",
+    cpu_threads=4,
+    num_workers=2
+)
 
 LANGUAGE_DICT = {
     "English": "en",
@@ -36,7 +42,7 @@ def fix_rtl_script(text, lang_code):
         return get_display(reshaped_text)
     return text
 
-def process_clean_fast_video(video_input, target_language, font_size, remove_music):
+def process_perfect_video(video_input, target_language, font_size):
     try:
         if video_input is None:
             return None, "Error: Pehle video upload karein!"
@@ -52,18 +58,15 @@ def process_clean_fast_video(video_input, target_language, font_size, remove_mus
             raw_audio
         ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # 2. Aggressive Background Music Filter
-        cleaned_audio = raw_audio
-        if remove_music:
-            cleaned_audio = "voice_isolated.wav"
-            # Bandpass + FFT Noise suppressor + Dynamic Compand for voice isolation
-            subprocess.run([
-                "ffmpeg", "-y", "-i", raw_audio,
-                "-af", "highpass=f=250,lowpass=f=3200,afftdn=nr=30:nf=-50:tn=1,compand=attacks=0:decays=0.08:points=-80/-80|-40/-10|0/0",
-                cleaned_audio
-            ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # 2. 100% Fast Background Music Cut (Bandpass + Noise Gate + Dynamic Compression)
+        cleaned_audio = "voice_isolated.wav"
+        subprocess.run([
+            "ffmpeg", "-y", "-i", raw_audio,
+            "-af", "highpass=f=280,lowpass=f=3400,afftdn=nr=32:nf=-50:tn=1,compand=attacks=0.01:decays=0.05:points=-80/-80|-40/-10|0/0",
+            cleaned_audio
+        ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # 3. High Accuracy & Fast Caption Detection
+        # 3. High Accuracy Speech Recognition
         selected_lang = LANGUAGE_DICT.get(target_language, "en")
         task_type = "translate" if selected_lang == "en" else "transcribe"
         
@@ -71,15 +74,15 @@ def process_clean_fast_video(video_input, target_language, font_size, remove_mus
             cleaned_audio,
             task=task_type,
             language=None if task_type == "translate" else selected_lang,
-            beam_size=1,
-            best_of=1,
+            beam_size=3,
+            best_of=3,
             temperature=0,
             vad_filter=True,
-            vad_parameters=dict(min_silence_duration_ms=300),
+            vad_parameters=dict(min_silence_duration_ms=250),
             word_timestamps=False
         )
 
-        # 4. ASS Subtitles Formatting (Bottom Center Alignment)
+        # 4. Perfect Bottom ASS Captions Assembly
         ass_path = "output_subtitles.ass"
         ass_header = f"""[Script Info]
 ScriptType: v4.00+
@@ -108,7 +111,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
                 f.write(f"Dialogue: 0,{convert_time(start_time)},{convert_time(end_time)},DefaultStyle,,0,0,0,,{formatted_dialogue}\n")
 
-        # 5. Super Fast Video Encoding (Ultrafast Preset)
+        # 5. Super Fast Video Encoding
         final_video = "final_output_video.mp4"
         ffmpeg_render = [
             "ffmpeg", "-y",
@@ -127,30 +130,29 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         ]
         subprocess.run(ffmpeg_render, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        return final_video, "🚀 Fast Processing Complete!"
+        return final_video, "🎯 Success! Background Music Muted & Perfect Captions Added."
 
     except Exception as e:
         return None, f"Error: {str(e)}"
 
-# Minimal & Clean Interface
-with gr.Blocks(title="⚡ Fast Subtitle & Music Remover") as demo:
-    gr.Markdown("# ⚡ Fast Video Processor (Captions + Music Remover)")
+# Permanent Link Interface
+with gr.Blocks(title="⚡ Fast Captions & Vocal Studio") as demo:
+    gr.Markdown("# ⚡ Permanent Fast Video Studio (Captions + Music Remover)")
     
     with gr.Row():
         with gr.Column():
             video_in = gr.Video(label="📹 Upload Video")
             target_lang = gr.Dropdown(choices=list(LANGUAGE_DICT.keys()), value="English", label="🌐 Subtitle Language")
             font_sz = gr.Slider(minimum=12, maximum=32, step=1, value=18, label="🔤 Font Size")
-            rem_mus = gr.Checkbox(label="🎵 Remove Background Music completely", value=True)
             submit_btn = gr.Button("🚀 Start Fast Processing")
         
         with gr.Column():
-            video_out = gr.Video(label="🎬 Processed Output")
+            video_out = gr.Video(label="🎬 Output Video")
             status_out = gr.Textbox(label="Status Window")
 
     submit_btn.click(
-        fn=process_clean_fast_video,
-        inputs=[video_in, target_lang, font_sz, rem_mus],
+        fn=process_perfect_video,
+        inputs=[video_in, target_lang, font_sz],
         outputs=[video_out, status_out]
     )
 
