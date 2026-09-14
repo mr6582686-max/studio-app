@@ -7,7 +7,7 @@ from faster_whisper import WhisperModel
 import arabic_reshaper
 from bidi.algorithm import get_display
 
-# Speed optimized model loading
+# Fast CPU Optimized Whisper Model
 whisper_model = WhisperModel("tiny", device="cpu", compute_type="int8", cpu_threads=4)
 
 LANGUAGE_DICT = {
@@ -44,7 +44,7 @@ def process_master_studio(video_input, target_language, font_size, text_color, p
         raw_input = "raw_input_video.mp4"
         shutil.copy(video_input, raw_input)
 
-        # 1. Extract Audio
+        # 1. Fast Audio Extraction
         raw_audio = "extracted_speech.wav"
         subprocess.run([
             "ffmpeg", "-y", "-i", raw_input,
@@ -52,7 +52,7 @@ def process_master_studio(video_input, target_language, font_size, text_color, p
             raw_audio
         ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # 2. Complete Vocal Isolation & Music Suppression
+        # 2. Strong Background Music & Noise Removal
         cleaned_audio = raw_audio
         if remove_music:
             cleaned_audio = "voice_isolated.wav"
@@ -62,7 +62,7 @@ def process_master_studio(video_input, target_language, font_size, text_color, p
                 cleaned_audio
             ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # 3. Pitch Shift & Effects
+        # 3. Voice Changer Pitch Effects
         final_audio = "processed_final_audio.wav"
         pitch_rate = str(int(16000 * pitch_level))
         tempo_rate = str(round(1.0 / pitch_level, 3))
@@ -84,7 +84,7 @@ def process_master_studio(video_input, target_language, font_size, text_color, p
             final_audio
         ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # 4. Transcription
+        # 4. Rapid Transcription
         selected_lang = LANGUAGE_DICT.get(target_language, "en")
         task_type = "translate" if selected_lang == "en" else "transcribe"
         
@@ -99,7 +99,7 @@ def process_master_studio(video_input, target_language, font_size, text_color, p
             word_timestamps=False
         )
 
-        # 5. ASS Subtitles (Alignment=2 ensures captions are at the BOTTOM CENTER)
+        # 5. Bottom Positioned Subtitles (Alignment=2)
         color_map = {
             "Yellow": "&H0000FFFF",
             "White": "&H00FFFFFF",
@@ -136,7 +136,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
                 f.write(f"Dialogue: 0,{convert_time(start_time)},{convert_time(end_time)},DefaultStyle,,0,0,0,,{formatted_dialogue}\n")
 
-        # 6. Fast Video Encoding
+        # 6. Optimized Fast Video Encoding
         video_filters = []
         if enable_copyright_shield:
             video_filters.append("hflip")
@@ -162,14 +162,14 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         ]
         subprocess.run(ffmpeg_render, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        return final_video, "🎯 Successfully processed! Captions are now at the bottom & music removed."
+        return final_video, "🎯 Successfully Processed! Subtitles placed at bottom."
 
     except Exception as e:
         return None, f"Error: {str(e)}"
 
 # Gradio Interface
 with gr.Blocks(title="⚡ Studio Ultimate") as demo:
-    gr.Markdown("# ⚡ Studio Ultimate (Bottom Captions + Clean Audio)")
+    gr.Markdown("# ⚡ Studio Ultimate (Fast Processing + Bottom Captions)")
     with gr.Row():
         with gr.Column():
             video_in = gr.Video(label="📹 Upload Video")
