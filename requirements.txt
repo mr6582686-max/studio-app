@@ -1,6 +1,4 @@
-openai-whisper
 gradio
-torch
-demucs
+faster-whisper
 arabic-reshaper
 python-bidi
