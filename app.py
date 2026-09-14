@@ -44,7 +44,7 @@ def process_master_studio(video_input, target_language, font_size, text_color, p
         raw_input = "raw_input_video.mp4"
         shutil.copy(video_input, raw_input)
 
-        # 1. Fast Extract Audio (Lower bitrate for fast AI processing)
+        # 1. Extract Audio
         raw_audio = "extracted_speech.wav"
         subprocess.run([
             "ffmpeg", "-y", "-i", raw_input,
@@ -52,17 +52,17 @@ def process_master_studio(video_input, target_language, font_size, text_color, p
             raw_audio
         ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # 2. Fast Voice Filtering
+        # 2. Complete Vocal Isolation & Music Suppression
         cleaned_audio = raw_audio
         if remove_music:
             cleaned_audio = "voice_isolated.wav"
             subprocess.run([
                 "ffmpeg", "-y", "-i", raw_audio,
-                "-af", "highpass=f=200,lowpass=f=3000",
+                "-af", "highpass=f=300,lowpass=f=3400,afftdn=nr=15:nf=-30",
                 cleaned_audio
             ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # 3. Fast Pitch Shift
+        # 3. Pitch Shift & Effects
         final_audio = "processed_final_audio.wav"
         pitch_rate = str(int(16000 * pitch_level))
         tempo_rate = str(round(1.0 / pitch_level, 3))
@@ -84,7 +84,7 @@ def process_master_studio(video_input, target_language, font_size, text_color, p
             final_audio
         ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # 4. Fast Transcription / Translation
+        # 4. Transcription
         selected_lang = LANGUAGE_DICT.get(target_language, "en")
         task_type = "translate" if selected_lang == "en" else "transcribe"
         
@@ -92,13 +92,14 @@ def process_master_studio(video_input, target_language, font_size, text_color, p
             cleaned_audio,
             task=task_type,
             language=None if task_type == "translate" else selected_lang,
-            beam_size=1,            # 🚀 Fast Search
-            best_of=1,              # 🚀 Fast Processing
-            vad_filter=True,        # 🚀 Skips silent audio spaces fast
+            beam_size=1,
+            best_of=1,
+            vad_filter=True,
+            vad_parameters=dict(min_silence_duration_ms=500),
             word_timestamps=False
         )
 
-        # 5. ASS Subtitles Generator
+        # 5. ASS Subtitles (Alignment=2 ensures captions are at the BOTTOM CENTER)
         color_map = {
             "Yellow": "&H0000FFFF",
             "White": "&H00FFFFFF",
@@ -116,7 +117,7 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: DefaultStyle,Sans,{font_size},{primary_color},&H00000000,&H00000000,&H80000000,1,0,0,0,100,100,1,0,1,2,10,10,18,1
+Style: DefaultStyle,Sans,{font_size},{primary_color},&H00000000,&H00000000,&H80000000,1,0,0,0,100,100,1,0,1,2,1,2,10,10,20,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -135,7 +136,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
                 f.write(f"Dialogue: 0,{convert_time(start_time)},{convert_time(end_time)},DefaultStyle,,0,0,0,,{formatted_dialogue}\n")
 
-        # 6. Ultra-fast Video Encoding
+        # 6. Fast Video Encoding
         video_filters = []
         if enable_copyright_shield:
             video_filters.append("hflip")
@@ -152,22 +153,23 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             "-map", "0:v:0",
             "-map", "1:a:0",
             "-c:v", "libx264",
-            "-preset", "ultrafast",  # 🚀 Fastest processing speed
-            "-crf", "30",           # Light output file size
+            "-preset", "ultrafast",
+            "-tune", "zerolatency",
+            "-crf", "30",
             "-c:a", "aac",
             "-b:a", "96k",
             final_video
         ]
         subprocess.run(ffmpeg_render, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        return final_video, "⚡ Processed rapidly in seconds!"
+        return final_video, "🎯 Successfully processed! Captions are now at the bottom & music removed."
 
     except Exception as e:
         return None, f"Error: {str(e)}"
 
 # Gradio Interface
-with gr.Blocks(title="⚡ Fast Studio Ultimate") as demo:
-    gr.Markdown("# ⚡ Fast Studio Ultimate (Speed Optimized)")
+with gr.Blocks(title="⚡ Studio Ultimate") as demo:
+    gr.Markdown("# ⚡ Studio Ultimate (Bottom Captions + Clean Audio)")
     with gr.Row():
         with gr.Column():
             video_in = gr.Video(label="📹 Upload Video")
